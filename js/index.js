@@ -5,6 +5,11 @@ const optionBtnPeriod = document.querySelector('.option__btn_period');
 const optionListOrder = document.querySelector('.option__list_order');
 const optionListPeriod = document.querySelector('.option__list_period');
 
+const declOfNum = (n, titles) => {
+  return n + ' ' + titles[n % 10 === 1 && n % 100 !== 11 ?
+    0 : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 1 : 2];
+};
+
 optionBtnOrder.addEventListener('click', () => {
     optionListOrder.classList.toggle('option__list_active')
     optionListPeriod.classList.remove('option__list_active')
@@ -94,3 +99,98 @@ overlayVacancy.addEventListener('click', (e) => {
         overlayVacancy.classList.remove('overlay_active');
     };
 });
+
+// вывод карточек
+
+const createCard = (vacancy) => {
+  const {
+    id,
+    title,
+    compensation,
+    workSchedule,
+    employer,
+    address,
+    description,
+    date
+  } = vacancy;
+
+  const card = document.createElement('li');
+  card.classList.add('result__item')
+
+  card.insertAdjacentHTML('afterbegin', `
+    <article class="vacancy">
+      <h2 class="vacancy__title">
+        <a class="vacancy__open-modal" href="#" data-vacancy="${id}">${title}</a>
+      </h2>
+      <p class="vacancy__compensation">${compensation}</p>
+      <p class="vacancy__work-schedule">${workSchedule}</p>
+      <div class="vacancy__employer">
+        <p class="vacancy__employer-title">${employer}</p>
+        <p class="vacancy__employer-address">${address}</p>
+      </div>
+      <p class="vacancy__description">${description}</p>
+      <p class="vacancy__date">
+        <time datetime="2022-02-25">${date}</time>
+      </p>
+      <div class="vacancy__wrapper-btn">
+        <a class="vacancy__response vacancy__open-modal" href="#" data-vacancy="${id}">Откликнуться</a>
+        <button class="vacancy__contacts">Показать контакты</button>
+      </div>
+    </article>
+  `);
+
+  return card;
+};
+
+// const renderCards = (data) => {
+//   resultList.textContent = '';
+//   for (let i = 0; i < data.length; i++) {
+//     resultList.append(createCard(data[i]));
+//   };
+// };
+
+// другой метод
+
+const renderCards = (data) => {
+  resultList.textContent = '';
+
+  const cards = data.map(createCard);
+  resultList.append(...cards);
+};
+
+const getData = ({search} = {}) => {
+  if (search) {
+    return fetch(`http://localhost:3000/api/vacancy?search=${search}`).then(response => response.json())
+  };
+  return fetch('http://localhost:3000/api/vacancy').then(response => response.json())
+};
+
+// поиск по вакансиям
+
+const formSearch = document.querySelector('.bottom__search');
+const found = document.querySelector('.found');
+
+formSearch.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const textSearch = formSearch.search.value;
+
+  if (textSearch.length > 2) {
+    formSearch.search.style.borderColor = '';
+    const data = await getData({search: textSearch});
+    renderCards(data);
+    found.innerHTML = `${declOfNum(data.length, ['вакансия', 'вакансии', 'вакансий'])} &laquo;${textSearch}&raquo;`;
+    formSearch.reset();
+  } else {
+    formSearch.search.style.borderColor = 'red';
+    setTimeout(() => {
+      formSearch.search.style.borderColor = '';
+    }, 2000);
+  };
+});
+
+const init = async () => {
+  const data = await getData();
+  renderCards(data);
+}
+
+init();
