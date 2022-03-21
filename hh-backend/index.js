@@ -23,12 +23,11 @@ function getVacancyList(params = {}) {
   const vacancy = JSON.parse(readFileSync(DB) || '[]');
   if (params.search) {
     const search = params.search.trim().toLowerCase();
-    const skills = data.skills.map(item => item.toLowerCase());
     return vacancy.filter(data => [
       data.title.toLowerCase(),
       data.employer.toLowerCase(),
       data.description.toLowerCase(),
-      ...skills
+      ...data.skills
       ]
         .some(str => str.toLowerCase().includes(search))
     );
