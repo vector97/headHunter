@@ -10,12 +10,27 @@ const overlayVacancy = document.querySelector('.overlay_vacancy');
 const resultList = document.querySelector('.result__list');
 const formSearch = document.querySelector('.bottom__search');
 const found = document.querySelector('.found');
+const orderBy = document.querySelector('#order_by')
+const searchPeriod = document.querySelector('#search_period')
 
-const getData = ({search, id} = {}) => {
+let data = [];
+
+const getData = ({search, id, country, city} = {}) => {
+  let url = `http://localhost:3000/api/vacancy/${id ? id : ''}`;
+
   if (search) {
-    return fetch(`http://localhost:3000/api/vacancy?search=${search}`).then(response => response.json())
+    url = `http://localhost:3000/api/vacancy?search=${search}`;
   };
-  return fetch(`http://localhost:3000/api/vacancy/${id ? id : ''}`).then(response => response.json())
+
+  if (city) {
+    url = `http://localhost:3000/api/vacancy/?city=${city}`;
+  }
+
+  if (country) {
+    url = `http://localhost:3000/api/vacancy/?country=${country}`;
+  }
+
+  return fetch(url).then(response => response.json())
 };
 
 const declOfNum = (n, titles) => {
@@ -70,6 +85,25 @@ const renderCards = (data) => {
   resultList.append(...cards);
 };
 
+const sortData = () => {
+  switch (orderBy.value) {
+    case 'down':
+      data.sort((a, b) => a.minCompensation > b.minCompensation ? 1 : -1);
+      break;
+    case 'up':
+      data.sort((a, b) => b.minCompensation > a.minCompensation ? 1 : -1);
+      break;
+    default:
+      data.sort((a,b) => new Date(a.date).getTime() > new Date(b.date).getTime() ? 1 : -1)
+  }
+};
+
+const filterData = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - searchPeriod.value);
+  return data.filter(item => new Date(item.date).getTime() > date)
+}
+
 const optionHandler = () => {
   optionBtnOrder.addEventListener('click', () => {
     optionListOrder.classList.toggle('option__list_active')
@@ -86,6 +120,9 @@ const optionHandler = () => {
 
     if (target.classList.contains('option__item')) {
       optionBtnOrder.textContent = target.textContent;
+      orderBy.value = target.dataset.sort;
+      sortData();
+      renderCards(data);
       optionListOrder.classList.remove('option__list_active')
 
       for (const elem of optionListOrder.querySelectorAll('.option__item')) {
@@ -103,6 +140,9 @@ const optionHandler = () => {
     
     if (target.classList.contains('option__item')) {
       optionBtnPeriod.textContent = target.textContent;
+      searchPeriod.value = target.dataset.date;
+      const tempData = filterData();
+      renderCards(tempData);
       optionListPeriod.classList.remove('option__list_active');
 
       for (const elem of optionListPeriod.querySelectorAll('.option__item')) {
@@ -125,10 +165,18 @@ const cityHandler = () => {
     city.classList.remove('city_active')
   });
 
-  cityRegionList.addEventListener('click', (event) => {
+  cityRegionList.addEventListener('click', async (event) => {
     const target = event.target;
 
     if (target.classList.contains('city__link')) {
+      const hash = new URL(target.href).hash.substring(1);
+      const option = {
+        [hash]: target.textContent,
+      }
+      data = await getData(option);
+      sortData();
+      data = filterData();
+      renderCards(data)
       topCityBtn.textContent = target.textContent;
       city.classList.remove('city_active');
     };
@@ -254,7 +302,9 @@ const searchHandler = () => {
 
     if (textSearch.length > 2) {
       formSearch.search.style.borderColor = '';
-      const data = await getData({search: textSearch});
+      data = await getData({search: textSearch});
+      sortData();
+      data = filterData();
       renderCards(data);
       found.innerHTML = `${declOfNum(data.length, ['вакансия', 'вакансии', 'вакансий'])} &laquo;${textSearch}&raquo;`;
       formSearch.reset();
@@ -268,7 +318,9 @@ const searchHandler = () => {
 };
 
 const init = async () => {
-  const data = await getData();
+  data = await getData();
+  sortData();
+  data = filterData();
   renderCards(data);
 
   optionHandler();
